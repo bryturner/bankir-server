@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const accountSchema = new mongoose.Schema(
 	{
 		user: { type: String, required: true },
+		firstName: { type: String, required: true },
 		standard: { type: Object, required: true },
 		premium: { type: Object, required: true },
 		messages: { type: Array, required: true },

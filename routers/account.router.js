@@ -18,6 +18,14 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
 
+		const firstName = req.body.firstName.trim().replace(/\s{2,}/g, '');
+
+		if (!firstName) {
+			return res
+				.status(400)
+				.json({ errorMessage: 'Please enter all required fields' });
+		}
+
 		const standard = {
 			balance: 10000,
 			transactions: [],
@@ -38,6 +46,7 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 
 		const newAccount = new Account({
 			user,
+			firstName,
 			standard,
 			premium,
 			accountTotal,
@@ -48,7 +57,7 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 		const savedAccount = await newAccount.save();
 		res.send(savedAccount);
 	} catch (err) {
-		res.json(err);
+		res.json({ errorMessage: 'New account could not be created' });
 	}
 });
 

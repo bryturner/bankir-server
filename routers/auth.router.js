@@ -6,9 +6,9 @@ const User = require('../models/user.model');
 // // Register new user
 router.post('/register', async (req, res) => {
 	try {
-		const { firstName, username, password, passwordVerify } = req.body;
+		const { username, password, passwordVerify } = req.body;
 
-		if (!firstName || !username || !password || !passwordVerify)
+		if (!username || !password || !passwordVerify)
 			return res
 				.status(400)
 				.json({ errorMessage: 'Please enter all required fields' });
@@ -34,7 +34,6 @@ router.post('/register', async (req, res) => {
 		const passwordHash = await bcrypt.hash(password, salt);
 
 		const newUser = new User({
-			firstName,
 			username,
 			passwordHash,
 		});
@@ -52,7 +51,7 @@ router.post('/register', async (req, res) => {
 			.cookie('token', token, {
 				httpOnly: true,
 			})
-			.send(savedUser);
+			.send();
 	} catch (err) {
 		console.error(err);
 		res.status(500).send();
