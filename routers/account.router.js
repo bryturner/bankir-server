@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const verifyToken = require('../middleware/verifyToken');
 const Account = require('../models/account.model');
-const jwt = require('jsonwebtoken');
+const { deposit } = require('../helpers');
 
 router.get('/', verifyToken, async (req, res) => {
 	try {
@@ -55,12 +55,20 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 // add to account, update account balance, update account totals, create message
 router.put('/transaction', verifyToken, async (req, res) => {
 	try {
-		const { user } = req.cookies;
-		const { account, type, amount, date } = req.body;
+		const user = res.locals.id;
+		const { amount } = req.body;
 
-		const existingUser = await Account.find({ userId: user });
+		const accountInfo = await Account.findOne({ user: user });
 
-		res.status(200).json();
+		const newBalance = deposit(accountInfo, amount);
+
+		const testAccount = await Account.updateOne(
+			{ user: user },
+			{
+				$set: { standard: { balance: newBalance } },
+			}
+		);
+		res.send(testAccount);
 	} catch (err) {
 		console.error(err);
 		res.status(500).json(err);
@@ -69,10 +77,10 @@ router.put('/transaction', verifyToken, async (req, res) => {
 
 router.put('/transfer', verifyToken, async (req, res) => {
 	try {
-		const { user } = req.cookies;
+		const user = res.locals.id;
 		const { toAccount, fromAccount, amount, date } = req.body;
 
-		const existingUser = await User.findById(user);
+		const existingUser = await Account.findOne({ user: user });
 
 		res.status(200).json();
 	} catch (err) {

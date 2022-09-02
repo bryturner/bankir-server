@@ -2,13 +2,6 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
-const {
-	ACCOUNT,
-	MESSAGES,
-	PREMIUM,
-	STANDARD,
-} = require('../constants/accountDefaults');
-const Account = require('../models/account.model');
 
 // // Register new user
 router.post('/register', async (req, res) => {
@@ -22,7 +15,7 @@ router.post('/register', async (req, res) => {
 
 		if (password.length < 8)
 			return res.status(400).json({
-				errorMessage: 'Password must be at least 8 characters long',
+				errorMessage: 'Password must be at least 8 characters',
 			});
 
 		if (password !== passwordVerify)
@@ -33,7 +26,7 @@ router.post('/register', async (req, res) => {
 		const existingUsername = await User.findOne({ username });
 		if (existingUsername)
 			return res.status(400).json({
-				errorMessage: 'An account with this username already exists',
+				errorMessage: 'Username already exists',
 			});
 
 		const salt = await bcrypt.genSalt();
@@ -66,85 +59,6 @@ router.post('/register', async (req, res) => {
 	}
 });
 
-// Register new user
-// router.post('/register', async (req, res) => {
-// 	try {
-// 		const { firstName, username, password, passwordVerify } = req.body;
-
-// 		if (!firstName || !username || !password || !passwordVerify)
-// 			return res
-// 				.status(400)
-// 				.json({ errorMessage: 'Please enter all required fields' });
-
-// 		if (password.length < 8)
-// 			return res.status(400).json({
-// 				errorMessage: 'Password must be at least 8 characters long',
-// 			});
-
-// 		if (password !== passwordVerify)
-// 			return res.status(400).json({
-// 				errorMessage: 'Please enter the same password twice',
-// 			});
-
-// 		const existingUsername = await User.findOne({ username });
-// 		if (existingUsername)
-// 			return res.status(400).json({
-// 				errorMessage: 'An account with this username already exists',
-// 			});
-
-// 		const salt = await bcrypt.genSalt();
-
-// 		const passwordHash = await bcrypt.hash(password, salt);
-
-// 		const account = ACCOUNT;
-
-// 		const messages = MESSAGES;
-
-// 		const newUser = new User({
-// 			firstName,
-// 			username,
-// 			passwordHash,
-// 			account,
-// 			messages,
-// 		});
-
-// 		const savedUser = await newUser.save();
-
-// 		const token = jwt.sign(
-// 			{
-// 				user: savedUser._id,
-// 			},
-// 			process.env.JWT_SECRET
-// 		);
-
-// 		const user = savedUser._id;
-// 		const premium = PREMIUM;
-// 		const standard = STANDARD;
-// 		const accountTotal = 15000;
-// 		const earningsTotal = 700;
-
-// 		const newAccount = new Account({
-// 			user,
-// 			standard,
-// 			premium,
-// 			accountTotal,
-// 			earningsTotal,
-// 			messages,
-// 		});
-
-// 		const savedAccount = await newAccount.save();
-
-// 		res
-// 			.cookie('token', token, {
-// 				httpOnly: true,
-// 				// expires: new Date(Date.now() + 8 * 3600000),
-// 			})
-// 			.send(savedAccount);
-// 	} catch (err) {
-// 		console.error(err);
-// 		res.status(500).send();
-// 	}
-// });
 // Log in user
 router.post('/login', async (req, res) => {
 	try {
