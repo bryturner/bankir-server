@@ -9,6 +9,7 @@ const accountSchema = new mongoose.Schema(
 		messages: { type: Array, required: true },
 		accountTotal: { type: Number, required: true },
 		earningsTotal: { type: Number, required: true },
+		isDefault: { type: Boolean, default: false },
 	},
 	{ timestamps: true }
 );

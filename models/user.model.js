@@ -4,7 +4,6 @@ const userSchema = new mongoose.Schema(
 	{
 		username: { type: String, required: true, unique: true },
 		passwordHash: { type: String, required: true },
-		isDefault: { type: Boolean, default: false },
 	},
 	{ timestamps: true }
 );
