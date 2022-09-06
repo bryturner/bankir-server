@@ -2,7 +2,7 @@ const router = require('express').Router();
 const verifyToken = require('../middleware/verifyToken');
 const Account = require('../models/account.model');
 const { deposit } = require('../helpers');
-const { Transaction } = require('../account');
+const { Transaction, AccountTransfer } = require('../classes/Transfer');
 
 router.get('/', verifyToken, async (req, res) => {
 	try {
@@ -27,6 +27,7 @@ router.get('/', verifyToken, async (req, res) => {
 			messages: messages,
 		};
 
+		// check isDefault for delete account button
 		res.send(accountInfo);
 	} catch (err) {
 		res.json(err);
@@ -83,7 +84,6 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 	}
 });
 
-// "user":"631283ae68279932c9275f80",
 // add to account, update account balance, update account totals, create message
 router.put('/transaction', verifyToken, async (req, res) => {
 	try {
@@ -182,9 +182,8 @@ router.put('/transaction', verifyToken, async (req, res) => {
 router.put('/transfer', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
-		const { transferFrom, transferTo, amount, date, description } = req.body;
-
-		// check transferTo value if Another user
+		const { amount, date, description, type, transferFrom, transferTo } =
+			req.body;
 
 		if (!description || !date || !amount) {
 			res.json({ errorMessage: 'Please fill out all fields' });
@@ -193,6 +192,39 @@ router.put('/transfer', verifyToken, async (req, res) => {
 		const accountInfo = await Account.findOne({ user: user });
 
 		const { accountTotal } = accountInfo;
+
+		// amount, date, description, type, transferFrom, transferTo
+		const transfer = new AccountTransfer(
+			amount,
+			date,
+			description,
+			type,
+			transferFrom,
+			transferTo
+		);
+
+		// === Other user transfer -> check username and update ===
+		if (transferTo !== 'premium' || transferTo !== 'standard') {
+			const otherUser = await Account.findOne({ user: otherUser });
+
+			if (!otherUser) {
+				res.json({
+					errorMessage: 'Username not found, please check spelling',
+				});
+			}
+
+			const { accountTotal } = otherUser;
+			const { balance } = otherUser.standard;
+
+			// update other user balance, total, transaction, message
+			const newUserBalance = transfer.updateOtherUserBalance(balance);
+
+			const newUserTotal = transfer.updateOtherUserTotal(accountTotal);
+
+			const newUserMessage = transfer.createOtherUserMessage(user);
+
+			const newUserTransaction = transfer.createTransactionTo();
+		}
 
 		res.status(200).json();
 	} catch (err) {
@@ -205,7 +237,7 @@ router.get('/checkOther', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
 
-		const currentUser = await Account.findOne({});
+		const currentUser = await Account.findOne({ user: user });
 
 		res.status(200).json();
 	} catch (err) {
