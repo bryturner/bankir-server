@@ -2,11 +2,30 @@ const router = require('express').Router();
 const verifyToken = require('../middleware/verifyToken');
 const Account = require('../models/account.model');
 const { deposit } = require('../helpers');
+const { Transaction } = require('../account');
 
 router.get('/', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
-		const accountInfo = await Account.findOne({ user: user });
+		const dbAccount = await Account.findOne({ user: user });
+
+		const {
+			firstName,
+			standard,
+			premium,
+			accountTotal,
+			earningsTotal,
+			messages,
+		} = dbAccount;
+
+		const accountInfo = {
+			firstName: firstName,
+			standard: standard,
+			premium: premium,
+			accountTotal: accountTotal,
+			earningsTotal: earningsTotal,
+			messages: messages,
+		};
 
 		res.send(accountInfo);
 	} catch (err) {
@@ -23,7 +42,7 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 		if (!firstName) {
 			return res
 				.status(400)
-				.json({ errorMessage: 'Please enter all required fields' });
+				.json({ errorMessage: 'Please fill out all required fields' });
 		}
 
 		const standard = {
@@ -42,7 +61,9 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 
 		const accountTotal = 15000;
 		const earningsTotal = 700;
-		const messages = [{ type: 'welcome', date: Date.now() }];
+		const messages = [
+			{ firstName: firstName, type: 'welcome', date: Date.now() },
+		];
 
 		const newAccount = new Account({
 			user,
@@ -54,42 +75,124 @@ router.post('/newAccount', verifyToken, async (req, res) => {
 			messages,
 		});
 
-		const savedAccount = await newAccount.save();
-		res.send(savedAccount);
+		await newAccount.save();
+
+		res.send();
 	} catch (err) {
 		res.json({ errorMessage: 'New account could not be created' });
 	}
 });
 
+// "user":"631283ae68279932c9275f80",
 // add to account, update account balance, update account totals, create message
 router.put('/transaction', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
-		const { amount } = req.body;
+		const { amount, date, type, account, description } = req.body;
+
+		if (!description || !date || !amount) {
+			res.json({ errorMessage: 'Please fill out all fields' });
+		}
+
+		// amount, date, type, account, description ....
+		const transaction = new Transaction(
+			amount,
+			date,
+			type,
+			account,
+			description
+		);
 
 		const accountInfo = await Account.findOne({ user: user });
 
-		const newBalance = deposit(accountInfo, amount);
+		const { accountTotal } = accountInfo;
 
-		const testAccount = await Account.updateOne(
-			{ user: user },
-			{
-				$set: { standard: { balance: newBalance } },
-			}
-		);
-		res.send(testAccount);
+		if (account === 'standard') {
+			const { balance } = accountInfo.standard;
+
+			const newBalance = transaction.updateBalance(balance);
+			const newAccountTotal = transaction.updateAccountTotal(accountTotal);
+			const newMessage = transaction.message;
+			const newTransaction = transaction.transaction;
+
+			await Account.updateOne(
+				{ user: user },
+				{
+					$set: {
+						standard: { balance: newBalance },
+						accountTotal: newAccountTotal,
+					},
+					$push: {
+						messages: newMessage,
+					},
+				}
+			);
+
+			await Account.updateOne(
+				{ user: user },
+				{
+					$push: {
+						'standard.transactions': newTransaction,
+					},
+				}
+			);
+
+			res.send();
+		}
+
+		if (account === 'premium') {
+			const { balance } = accountInfo.premium;
+
+			const newBalance = transaction.updateBalance(balance);
+			const newAccountTotal = transaction.updateAccountTotal(accountTotal);
+			const newMessage = transaction.message;
+			const newTransaction = transaction.transaction;
+
+			await Account.updateOne(
+				{ user: user },
+				{
+					$set: {
+						premium: { balance: newBalance },
+						accountTotal: newAccountTotal,
+					},
+					$push: {
+						messages: newMessage,
+					},
+				}
+			);
+
+			await Account.updateOne(
+				{ user: user },
+				{
+					$push: {
+						'premium.transactions': newTransaction,
+					},
+				}
+			);
+
+			res.send();
+		}
 	} catch (err) {
 		console.error(err);
 		res.status(500).json(err);
 	}
 });
 
+// type transfer
 router.put('/transfer', verifyToken, async (req, res) => {
 	try {
 		const user = res.locals.id;
-		const { toAccount, fromAccount, amount, date } = req.body;
+		const { transferFrom, transferTo, amount, date, description } = req.body;
 
-		const existingUser = await Account.findOne({ user: user });
+		// check transferTo value if Another user
+
+		if (!description || !date || !amount) {
+			res.json({ errorMessage: 'Please fill out all fields' });
+		}
+
+		const accountInfo = await Account.findOne({ user: user });
+
+		const { accountTotal } = accountInfo;
 
 		res.status(200).json();
 	} catch (err) {
@@ -98,10 +201,12 @@ router.put('/transfer', verifyToken, async (req, res) => {
 	}
 });
 
-// create message for any transaction and return the message
-// {message, type, date}
-router.put('/message', verifyToken, async (req, res) => {
+router.get('/checkOther', verifyToken, async (req, res) => {
 	try {
+		const user = res.locals.id;
+
+		const currentUser = await Account.findOne({});
+
 		res.status(200).json();
 	} catch (err) {
 		console.error(err);

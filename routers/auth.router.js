@@ -11,7 +11,7 @@ router.post('/register', async (req, res) => {
 		if (!username || !password || !passwordVerify)
 			return res
 				.status(400)
-				.json({ errorMessage: 'Please enter all required fields' });
+				.json({ errorMessage: 'Please enter fill out required fields' });
 
 		if (password.length < 8)
 			return res.status(400).json({
@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
 
 		if (password !== passwordVerify)
 			return res.status(400).json({
-				errorMessage: 'Please enter the same password twice',
+				errorMessage: 'Passwords must match',
 			});
 
 		const existingUsername = await User.findOne({ username });
@@ -66,7 +66,7 @@ router.post('/login', async (req, res) => {
 		if (!username || !password)
 			return res
 				.status(400)
-				.json({ errorMessage: 'Please enter all required fields' });
+				.json({ errorMessage: 'Please fill out all required fields' });
 
 		const existingUser = await User.findOne({ username });
 
@@ -100,7 +100,7 @@ router.post('/login', async (req, res) => {
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({
-			errorMessage: 'Error in POST login',
+			errorMessage: 'An error has occurred',
 		});
 	}
 });
