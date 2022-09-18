@@ -3,7 +3,7 @@ const verifyToken = require('../middleware/verifyToken');
 const User = require('../models/user.model');
 
 // Delete user
-router.delete('/deleteUser', verifyToken, async (req, res) => {
+router.delete('/delete', verifyToken, async (req, res) => {
 	try {
 		const { user } = req.cookies;
 

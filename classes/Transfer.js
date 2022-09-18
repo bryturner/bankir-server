@@ -1,16 +1,18 @@
 class Transfer {
-	amount;
+	strAmount;
 	date;
 	description;
 	type;
+	accountTotal;
 	id;
-	intAmount;
+	floatAmount;
 
-	constructor(amount, date, description, type) {
-		this.amount = amount;
+	constructor(strAmount, date, description, type, accountTotal) {
+		this.strAmount = strAmount;
 		this.date = date;
 		this.description = description;
 		this.type = type;
+		this.accountTotal = accountTotal;
 
 		this.#createId();
 		this.#convertAmount();
@@ -22,12 +24,12 @@ class Transfer {
 	}
 
 	#convertAmount() {
-		this.intAmount = parseFloat(this.amount.replace(/,/g, ''));
+		this.floatAmount = parseFloat(this.strAmount.replace(/,/g, ''));
 
-		if (this.intAmount <= 0) {
+		if (this.floatAmount <= 0) {
 			throw new Error('Amount cannot be less than or equal to 0');
 		}
-		return this.intAmount;
+		return this.floatAmount;
 	}
 }
 
@@ -36,55 +38,67 @@ class Transaction extends Transfer {
 	transaction;
 	message;
 	balance;
-	accountTotal;
 
-	constructor(amount, date, description, type, account, intAmount) {
-		super(amount, date, description, type, intAmount);
+	constructor(
+		strAmount,
+		date,
+		description,
+		type,
+		accountTotal,
+		account,
+		floatAmount
+	) {
+		super(strAmount, date, description, type, accountTotal, floatAmount);
 
 		this.account = account;
 
-		this.#createMessage();
-		this.#createTransaction();
+		// this.#createMessage();
+		// this.#createTransaction();
+		// this.#updateAccountTotal();
 	}
 
 	#update(value) {
 		if (this.type === 'withdrawal') {
-			return value - this.intAmount;
+			return parseFloat((value - this.floatAmount).toFixed(2));
 		} else if (this.type === 'deposit') {
-			return value + this.intAmount;
+			return parseFloat((value + this.floatAmount).toFixed(2));
 		} else {
 			throw new Error(`Type "${this.type}" does not exist`);
 		}
 	}
 
-	#createMessage() {
+	createMessage() {
 		const messageId = `msg${this.id}`;
 		this.message = {
 			type: this.type,
 			date: this.date,
-			amount: this.amount,
+			amount: this.strAmount,
+			account: this.account,
 			id: messageId,
 		};
+		return this.message;
 	}
 
-	#createTransaction() {
+	// !!!! Transaction for negative amounts
+	createTransaction() {
 		const transactionId = `t-to${this.id}`;
 		this.transaction = {
 			date: this.date,
 			description: this.description,
-			amount: this.intAmount,
+			amount: this.floatAmount,
 			id: transactionId,
 		};
+		return this.transaction;
+	}
+
+	updateAccountTotal() {
+		this.accountTotal = this.#update(this.accountTotal);
+		return this.accountTotal;
 	}
 
 	updateBalance(balance) {
 		this.balance = this.#update(balance);
 		return this.balance;
-	}
-
-	updateAccountTotal(accountTotal) {
-		this.accountTotal = this.#update(accountTotal);
-		return this.accountTotal;
 	}
 }
 
@@ -93,26 +107,30 @@ class AccountTransfer extends Transfer {
 	transferTo;
 	transactionTo;
 	transactionFrom;
+	// otherTotal;
+	// otherBalance;
+	// otherMessage;
 	message;
 	balance;
 	accountTotal;
 
 	constructor(
-		amount,
+		strAmount,
 		date,
 		description,
 		type,
 		transferFrom,
 		transferTo,
-		intAmount
+		floatAmount
 	) {
-		super(amount, date, description, type, intAmount);
+		super(strAmount, date, description, type, floatAmount);
 
 		this.transferFrom = transferFrom;
 		this.transferTo = transferTo;
 
 		this.#createMessage();
 		this.#createTransactionFrom();
+		this.#createTransactionTo();
 	}
 
 	#createMessage() {
@@ -122,7 +140,7 @@ class AccountTransfer extends Transfer {
 			transferFrom: this.transferFrom,
 			transferTo: this.transferTo,
 			date: this.date,
-			amount: this.amount,
+			amount: this.strAmount,
 			id: messageId,
 		};
 	}
@@ -132,53 +150,92 @@ class AccountTransfer extends Transfer {
 		this.transactionFrom = {
 			date: this.date,
 			description: this.description,
-			amount: this.intAmount,
+			amount: -this.floatAmount,
 			id: transactionId,
 		};
 	}
 
-	createTransactionTo() {
+	#createTransactionTo() {
 		const transactionId = `t-to${this.id}`;
 		this.transactionTo = {
 			date: this.date,
 			description: this.description,
-			amount: this.intAmount,
+			amount: this.floatAmount,
 			id: transactionId,
 		};
-		return this.transactionTo;
 	}
 
 	updateFromBalance(balance) {
-		return balance - this.intAmount;
+		return parseFloat((balance - this.floatAmount).toFixed(2));
 	}
 
 	updateToBalance(balance) {
-		return balance + this.intAmount;
+		return parseFloat((balance + this.floatAmount).toFixed(2));
 	}
 
 	updateAccountTotal(accountTotal) {
-		return accountTotal - this.intAmount;
+		return parseFloat((accountTotal - this.floatAmount).toFixed(2));
+	}
+}
+
+class OtherUserTransfer extends Transfer {
+	message;
+	transactionFrom;
+	transactionTo;
+	balance;
+
+	constructor(
+		strAmount,
+		date,
+		description,
+		type,
+		accountTotal,
+		user,
+		balance,
+		floatAmount
+	) {
+		super(strAmount, date, description, type, accountTotal, floatAmount);
+
+		this.user = user;
+		this.balance = balance;
+
+		this.#createMessage();
+		this.#createTransaction();
+		this.#updateBalance();
+		this.#updateTotal();
 	}
 
-	updateOtherUserBalance(balance) {
-		return balance + this.intAmount;
+	#updateBalance() {
+		this.balance = parseFloat((this.balance + this.floatAmount).toFixed(2));
 	}
 
-	updateOtherUserTotal(total) {
-		return total + this.intAmount;
+	#updateTotal() {
+		this.accountTotal = parseFloat(
+			(this.accountTotal + this.floatAmount).toFixed(2)
+		);
 	}
 
-	createOtherUserMessage(user) {
+	#createTransaction() {
+		const transactionId = `t-to${this.id}`;
+		this.transactionTo = {
+			date: this.date,
+			description: this.description,
+			amount: this.floatAmount,
+			id: transactionId,
+		};
+	}
+
+	#createMessage() {
 		const messageId = `msg${this.id}`;
-		return {
+		this.message = {
 			type: this.type,
-			transferFrom: user,
+			transferFrom: this.user,
 			transferTo: 'standard',
 			date: this.date,
-			amount: this.amount,
+			amount: this.strAmount,
 			id: messageId,
 		};
 	}
 }
 
-module.exports = { Transaction, AccountTransfer };
+module.exports = { Transaction, AccountTransfer, OtherUserTransfer };
